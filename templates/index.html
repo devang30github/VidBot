@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1A202C; /* Darkest Blue-Gray - Main background */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: #2D3748; /* Dark Blue-Gray - Slightly lighter than body background */
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); /* More pronounced shadow for depth */
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 700px;
+        }
+
+        .left-panel {
+            background: linear-gradient(135deg, #4A5568 0%, #2C5282 100%); /* Muted Dark Gray to Dark Blue */
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #E2E8F0; /* Light Gray for text */
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); /* Very subtle glow */
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .left-panel h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5); /* Clearer shadow on light text */
+            z-index: 1;
+            position: relative;
+        }
+
+        .left-panel p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+            z-index: 1;
+            position: relative;
+        }
+
+        .right-panel {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            color: #E2E8F0; /* Light Gray for headings */
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #A0AEC0; /* Muted Light Gray */
+            font-size: 1rem;
+        }
+
+        .url-input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 16px 20px;
+            border: 1px solid #4A5568; /* Darker border */
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #2D3748; /* Same as container for seamless look */
+            color: #CBD5E0; /* Light text for input */
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: #63B3ED; /* Vibrant but not glaring blue for focus */
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.25); /* Softer glow */
+            background: #2D3748; /* Keep dark background */
+        }
+
+        .process-btn {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #4299E1 0%, #3182CE 100%); /* Medium to Dark Blue */
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.3); /* Darker, more diffused shadow */
+        }
+
+        .process-btn:disabled {
+            opacity: 0.4; /* More muted when disabled */
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .status-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Status colors adjusted for dark theme */
+        .status-message.success {
+            background: #22543D; /* Dark Green */
+            color: #9AE6B4; /* Light Green */
+            border: 1px solid #48BB78;
+        }
+
+        .status-message.error {
+            background: #63171B; /* Dark Red */
+            color: #FEB2B2; /* Light Red */
+            border: 1px solid #E53E3E;
+        }
+
+        .status-message.info {
+            background: #2A4365; /* Dark Blue */
+            color: #90CDF4; /* Light Blue */
+            border: 1px solid #4299E1;
+        }
+
+        .chat-section {
+            display: none;
+            flex-direction: column;
+            height: 400px;
+        }
+
+        .chat-section.show {
+            display: flex;
+        }
+
+        .chat-container {
+            flex: 1;
+            border: 1px solid #4A5568; /* Darker border */
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #2D3748; /* Same as container */
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #252F3F; /* Slightly darker background for messages area */
+        }
+
+        .message {
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.bot {
+            text-align: left;
+        }
+
+        .message-content {
+            display: inline-block;
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #4299E1 0%, #3182CE 100%); /* Medium to Dark Blue */
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: #4A5568; /* Muted Dark Gray for bot messages */
+            color: #E2E8F0; /* Light Gray text */
+            border: 1px solid #2D3748; /* Border matches container for depth */
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: #2D3748; /* Same as container */
+            border-top: 1px solid #4A5568; /* Darker border */
+        }
+
+        .chat-input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 1px solid #4A5568; /* Darker border */
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #252F3F; /* Darker input field background */
+            color: #CBD5E0; /* Light text */
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #63B3ED; /* Vibrant but not glaring blue for focus */
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.25);
+        }
+
+        .send-btn {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #4299E1 0%, #3182CE 100%); /* Medium to Dark Blue */
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.3);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4A5568; /* Darker base for loader */
+            border-top: 2px solid #63B3ED; /* Vibrant but not glaring blue */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                max-width: 100%;
+            }
+            
+            .left-panel {
+                padding: 30px 20px;
+            }
+            
+            .left-panel h1 {
+                font-size: 2.5rem;
+            }
+            
+            .right-panel {
+                padding: 30px 20px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .chat-section {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h1>🎬 YouTube Chat</h1>
+            <p>Turn any YouTube video into an interactive conversation. Ask questions, get insights, and explore content like never before.</p>
+        </div>
+        
+        <div class="right-panel">
+            <div class="header">
+                <h2>Start Chatting</h2>
+                <p>Paste a YouTube URL to begin your conversation</p>
+            </div>
+            
+            <div class="url-input-section">
+                <div class="input-group">
+                    <input type="url" 
+                           id="youtube-url" 
+                           class="url-input" 
+                           placeholder="https://www.youtube.com/watch?v=..."
+                           required>
+                    <button id="process-btn" class="process-btn" onclick="processVideo()">
+                        Process Video
+                    </button>
+                </div>
+                
+                <div id="status-message" class="status-message"></div>
+            </div>
+            
+            <div id="chat-section" class="chat-section">
+                <div class="chat-container">
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <div class="chat-input-group">
+                            <input type="text" 
+                                   id="chat-input" 
+                                   class="chat-input" 
+                                   placeholder="Ask a question about the video..."
+                                   onkeypress="if(event.key==='Enter') sendMessage()">
+                            <button id="send-btn" class="send-btn" onclick="sendMessage()">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get the current host for API calls
+        const API_BASE_URL = window.location.origin;
+        let currentVideoId = null;
+
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type} show`;
+            
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 5000);
+        }
+
+        function setLoading(isLoading) {
+            const processBtn = document.getElementById('process-btn');
+            const sendBtn = document.getElementById('send-btn');
+            
+            if (isLoading) {
+                processBtn.innerHTML = '<span class="loader"></span>Processing...';
+                processBtn.disabled = true;
+                sendBtn.disabled = true;
+            } else {
+                processBtn.innerHTML = 'Process Video';
+                processBtn.disabled = false;
+                sendBtn.disabled = false;
+            }
+        }
+
+        function extractVideoId(url) {
+            const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            return match ? match[1] : null;
+        }
+
+        async function processVideo() {
+            const urlInput = document.getElementById('youtube-url');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showStatus('Please enter a YouTube URL', 'error');
+                return;
+            }
+
+            const videoId = extractVideoId(url);
+            if (!videoId) {
+                showStatus('Please enter a valid YouTube URL', 'error');
+                return;
+            }
+
+            setLoading(true);
+            showStatus('Processing video... This may take a moment', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/process-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        youtube_url: url
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentVideoId = data.video_id;
+                    document.getElementById('chat-section').classList.add('show');
+                    
+                    showStatus('Video processed successfully! You can now start chatting.', 'success');
+                } else {
+                    showStatus(data.error || 'Failed to process video', 'error');
+                }
+            } catch (error) {
+                showStatus('Error connecting to server. Please try again.', 'error');
+                console.error('Error:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function addMessage(content, isUser = false) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const chatInput = document.getElementById('chat-input');
+            const question = chatInput.value.trim();
+            
+            if (!question) return;
+            
+            if (!currentVideoId) {
+                showStatus('Please process a video first', 'error');
+                return;
+            }
+
+            // Add user message
+            addMessage(question, true);
+            chatInput.value = '';
+
+            // Show loading
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.innerHTML = '<span class="loader"></span>Sending...';
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        video_id: currentVideoId,
+                        question: question
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.answer, false);
+                    
+                    // Add sources if available
+                    if (data.sources && data.sources.length > 0) {
+                        const sourcesText = "Sources: " + data.sources.map((s, i) => `${i + 1}. ${s}`).join(' ');
+                        addMessage(sourcesText, false);
+                    }
+                } else {
+                    addMessage('Sorry, I encountered an error. Please try again.', false);
+                    showStatus(data.detail || 'Error sending message', 'error');
+                }
+            } catch (error) {
+                addMessage('Sorry, I encountered an error. Please try again.', false);
+                showStatus('Error connecting to server', 'error');
+                console.error('Error:', error);
+            } finally {
+                sendBtn.innerHTML = 'Send';
+                sendBtn.disabled = false;
+            }
+        }
+
+        // Auto-focus on input when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('youtube-url').focus();
+        });
+    </script>
+</body>
+</html>
